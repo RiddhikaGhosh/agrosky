@@ -66,7 +66,7 @@ const analyzeLeafImageWithGemini = async (imageUrl, cropContext, maxRetries = 2,
   // Permanent errors (404, invalid URL, bad format) will fail fast here without wastefully retrying
   const imageInlineData = await fetchImageAsInlineData(imageUrl);
 
-  const modelName = geminiConfig.modelName || 'gemini-2.5-flash';
+  const modelName = geminiConfig.modelName || 'gemini-3-flash-preview';
   const model = genAI.getGenerativeModel({
     model: modelName,
     generationConfig: {
