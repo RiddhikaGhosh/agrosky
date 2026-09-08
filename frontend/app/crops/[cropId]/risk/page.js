@@ -13,6 +13,10 @@ import { cropsApi } from '@/lib/api/crops';
 import { riskApi } from '@/lib/api/risk';
 import { Activity, Sprout, ArrowLeft } from 'lucide-react';
 
+export async function generateStaticParams() {
+  return [];
+}
+
 export default function CropRiskPage({ params: paramsPromise }) {
   const params = use(paramsPromise);
   const cropId = params.cropId;

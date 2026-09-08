@@ -16,6 +16,10 @@ import { useToast } from '@/context/ToastContext';
 import { cropsApi } from '@/lib/api/crops';
 import { Sprout, Calendar, Layers, ArrowLeft, Check } from 'lucide-react';
 
+export async function generateStaticParams() {
+  return [];
+}
+
 export default function EditCropPage({ params: paramsPromise }) {
   const params = use(paramsPromise);
   const cropId = params.cropId;

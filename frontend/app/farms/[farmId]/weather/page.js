@@ -26,6 +26,10 @@ import {
   Cloud,
 } from 'lucide-react';
 
+export async function generateStaticParams() {
+  return [];
+}
+
 export default function FarmWeatherPage({ params: paramsPromise }) {
   const params = use(paramsPromise);
   const farmId = params.farmId;

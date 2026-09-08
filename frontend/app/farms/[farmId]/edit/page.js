@@ -16,6 +16,10 @@ import { useToast } from '@/context/ToastContext';
 import { farmsApi } from '@/lib/api/farms';
 import { Tractor, MapPin, Navigation, Layers, ArrowLeft, Check } from 'lucide-react';
 
+export async function generateStaticParams() {
+  return [];
+}
+
 export default function EditFarmPage({ params: paramsPromise }) {
   const params = use(paramsPromise);
   const farmId = params.farmId;

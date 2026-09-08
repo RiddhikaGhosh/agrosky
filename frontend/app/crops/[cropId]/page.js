@@ -30,6 +30,10 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
+export async function generateStaticParams() {
+  return [];
+}
+
 export default function CropDetailPage({ params: paramsPromise }) {
   const params = use(paramsPromise);
   const cropId = params.cropId;

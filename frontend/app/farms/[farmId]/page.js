@@ -39,6 +39,10 @@ import {
   Eye,
 } from 'lucide-react';
 
+export async function generateStaticParams() {
+  return [];
+}
+
 export default function FarmDetailPage({ params: paramsPromise }) {
   const params = use(paramsPromise);
   const farmId = params.farmId;
