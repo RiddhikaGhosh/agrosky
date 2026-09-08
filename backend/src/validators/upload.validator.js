@@ -21,6 +21,8 @@ const registerMetadataSchema = Joi.object({
   cropId: idSchema,
   public_id: Joi.string().trim().required(),
   original_url: Joi.string().uri().required(),
+  optimized_url: Joi.string().uri().optional().allow(null, ''),
+  secure_url: Joi.string().uri().optional().allow(null, ''),
   resource_type: Joi.string().valid('image', 'raw', 'video').default('image'),
   width: Joi.number().integer().positive().allow(null),
   height: Joi.number().integer().positive().allow(null),

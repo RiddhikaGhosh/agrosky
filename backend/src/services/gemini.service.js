@@ -13,14 +13,21 @@ class GeminiService {
   /**
    * Orchestrates the 13-step AI crop disease diagnosis process
    */
-  async analyzeCropDisease(userId, farmId, cropId, cloudinaryAssetId, userRole = 'farmer') {
+  async analyzeCropDisease(userId, farmId, cropId, cloudinaryAssetId, userRole = 'farmer', directImageUrl = null) {
     // 1-3. Verify farm, crop, and asset ownership
     const farm = await farmService.getFarmById(userId, farmId, userRole);
     const crop = await cropService.getCropById(userId, cropId, userRole);
-    const asset = await cloudinaryService.getAssetById(userId, cloudinaryAssetId, userRole);
+    let asset = null;
+    let imageUrl = directImageUrl;
 
-    // 5. Retrieve optimized Cloudinary URL
-    const imageUrl = asset.optimized_url || asset.original_url;
+    if (cloudinaryAssetId) {
+      asset = await cloudinaryService.getAssetById(userId, cloudinaryAssetId, userRole);
+      imageUrl = asset.optimized_url || asset.original_url || imageUrl;
+    }
+
+    if (!imageUrl) {
+      throw ApiError.badRequest('No image URL or Cloudinary asset provided for analysis', 'INVALID_IMAGE_URL');
+    }
 
     // 6. Assemble agricultural context
     const cropContext = {
@@ -30,7 +37,20 @@ class GeminiService {
     };
 
     // 7-9. Call Gemini AI API with image & prompt
-    const { rawResponse } = await analyzeLeafImageWithGemini(imageUrl, cropContext);
+    let rawResponse;
+    try {
+      const geminiRes = await analyzeLeafImageWithGemini(imageUrl, cropContext);
+      rawResponse = geminiRes.rawResponse;
+    } catch (err) {
+      if (asset && asset.original_url && asset.original_url !== imageUrl && (err.errorCode === 'CLOUDINARY_IMAGE_NOT_FOUND' || err.statusCode === 404)) {
+        logger.warn(`Optimized URL 404, falling back to original_url: ${asset.original_url}`);
+        imageUrl = asset.original_url;
+        const geminiRes = await analyzeLeafImageWithGemini(imageUrl, cropContext);
+        rawResponse = geminiRes.rawResponse;
+      } else {
+        throw err;
+      }
+    }
 
     // 10-11. Validate Gemini AI response strictly against schema
     const validated = parseAndValidateGeminiResponse(rawResponse);
@@ -40,7 +60,7 @@ class GeminiService {
       user_id: userId,
       farm_id: farmId,
       crop_id: cropId,
-      cloudinary_asset_id: cloudinaryAssetId,
+      cloudinary_asset_id: asset ? asset.id : (cloudinaryAssetId || null),
       disease_name: validated.diseaseName,
       confidence_score: validated.confidenceScore,
       severity: validated.severity,

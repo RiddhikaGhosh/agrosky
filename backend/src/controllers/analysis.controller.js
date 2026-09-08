@@ -7,8 +7,9 @@ const executeCompleteAnalysis = async (req, res, next) => {
     const farmId = req.body.farmId || req.body.farm_id;
     const cropId = req.body.cropId || req.body.crop_id;
     const cloudinaryAssetId = req.body.cloudinaryAssetId || req.body.cloudinary_asset_id;
+    const imageUrl = req.body.imageUrl || req.body.image_url || req.body.secure_url;
     const result = await analysisService.executeCompleteAnalysis(
-      req.user.id, farmId, cropId, cloudinaryAssetId, req.user.role
+      req.user.id, farmId, cropId, cloudinaryAssetId, req.user.role, imageUrl
     );
     return sendSuccess(res, 200, 'Complete agricultural disease analysis executed successfully', result);
   } catch (error) {
@@ -21,8 +22,9 @@ const analyzeDisease = async (req, res, next) => {
     const farmId = req.body.farmId || req.body.farm_id;
     const cropId = req.body.cropId || req.body.crop_id;
     const cloudinaryAssetId = req.body.cloudinaryAssetId || req.body.cloudinary_asset_id;
+    const imageUrl = req.body.imageUrl || req.body.image_url || req.body.secure_url;
     const result = await geminiService.analyzeCropDisease(
-      req.user.id, farmId, cropId, cloudinaryAssetId, req.user.role
+      req.user.id, farmId, cropId, cloudinaryAssetId, req.user.role, imageUrl
     );
     return sendSuccess(res, 200, 'Crop disease analysis completed successfully', result);
   } catch (error) {

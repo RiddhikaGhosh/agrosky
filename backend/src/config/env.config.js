@@ -32,6 +32,7 @@ const envSchema = Joi.object({
 
   // Gemini AI API configuration
   GEMINI_API_KEY: Joi.string().required(),
+  GEMINI_MODEL: Joi.string().default('gemini-2.5-flash').optional(),
 
   // OpenWeatherMap API configuration
   OPENWEATHER_API_KEY: Joi.string().required(),

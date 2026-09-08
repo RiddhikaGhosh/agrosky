@@ -1,4 +1,4 @@
-const { getPool } = require('./index');
+const mysqlIndex = require('./index');
 const { logger } = require('../../utils/logger');
 
 /**
@@ -8,7 +8,7 @@ const { logger } = require('../../utils/logger');
  * @param {Function} callback - Async function receiving (connection) parameter
  */
 const withTransaction = async (callback) => {
-  const pool = getPool();
+  const pool = mysqlIndex.getPool();
   const connection = await pool.getConnection();
   
   try {

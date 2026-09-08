@@ -38,7 +38,7 @@ const sampleLeaves = [
   {
     title: 'Tomato Late Blight',
     crop_type: 'Tomato',
-    url: 'https://images.unsplash.com/photo-1592417817098-8f3d6eb1626d?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format&fit=crop&w=800&q=80',
     description: 'Dark water-soaked lesions on leaf margins with white fungal sporulation.',
   },
   {
@@ -221,35 +221,47 @@ function DiseaseScannerContent() {
       // Step 1: Upload / Cloudinary Signature Request
       setUploadStage('signing');
       setProgressMessage('Requesting Cloudinary upload signature from backend...');
-      await uploadsApi.getUploadSignature({
+      const sigRes = await uploadsApi.getUploadSignature({
         farmId: selectedFarmId,
         cropId: selectedCropId,
       });
+      const signatureData = sigRes.data || sigRes;
 
-      // Step 2: Register Metadata
+      // Step 2: Actually upload the image to Cloudinary CDN
+      setUploadStage('uploading');
+      setProgressMessage('Uploading leaf photograph securely to Cloudinary CDN...');
+      const fileToUpload = selectedFile || previewUrl || 'https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format&fit=crop&w=800&q=80';
+      const cloudinaryResult = await uploadsApi.uploadToCloudinary(fileToUpload, signatureData);
+
+      // Step 3: Register Real Cloudinary Metadata in MySQL operational DB
       setUploadStage('optimizing');
       setProgressMessage('Registering Cloudinary asset metadata in MySQL operational DB...');
-      const imageUrlToUse = previewUrl || 'https://images.unsplash.com/photo-1592417817098-8f3d6eb1626d?auto=format&fit=crop&w=800&q=80';
+      const optimizedCdnUrl = (cloudinaryResult.eager && cloudinaryResult.eager[0] && cloudinaryResult.eager[0].secure_url)
+        || cloudinaryResult.secure_url;
+
       const metaRes = await uploadsApi.registerMetadata({
         farm_id: selectedFarmId,
         crop_id: selectedCropId,
-        public_id: `crop_${selectedCropId}_${Date.now()}`,
-        original_url: imageUrlToUse,
-        resource_type: 'image',
-        width: 1200,
-        height: 900,
-        format: 'jpg',
+        public_id: cloudinaryResult.public_id,
+        original_url: cloudinaryResult.secure_url,
+        optimized_url: optimizedCdnUrl,
+        secure_url: cloudinaryResult.secure_url,
+        resource_type: cloudinaryResult.resource_type || 'image',
+        width: cloudinaryResult.width || 800,
+        height: cloudinaryResult.height || 600,
+        format: cloudinaryResult.format || 'jpg',
       });
 
       const assetId = metaRes.data?.id || metaRes.id || metaRes.asset_id;
 
-      // Step 3: Execute Master AI Analysis Pipeline
+      // Step 4: Execute Master AI Analysis Pipeline
       setUploadStage('analyzing');
       setProgressMessage('Executing Gemini AI vision disease diagnosis & deterministic risk calculation...');
       const analysisRes = await analysisApi.executeCompleteAnalysis({
         farmId: selectedFarmId,
         cropId: selectedCropId,
         cloudinaryAssetId: assetId,
+        imageUrl: optimizedCdnUrl,
       });
 
       const resultObj = analysisRes.data?.analysis || analysisRes.data || analysisRes;

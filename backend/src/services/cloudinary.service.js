@@ -85,6 +85,27 @@ class CloudinaryService {
   }
 
   /**
+   * Uploads an image (base64 data URI, file path, or remote URL) directly to Cloudinary from the server
+   */
+  async uploadImage(fileOrDataUri, options = {}) {
+    try {
+      const defaultOptions = {
+        folder: options.folder || 'agroassist/scans',
+        resource_type: 'image',
+        transformation: this.getTransformationOptions()
+      };
+      const result = await cloudinary.uploader.upload(fileOrDataUri, {
+        ...defaultOptions,
+        ...options
+      });
+      return result;
+    } catch (error) {
+      logger.error(`Cloudinary direct server upload failed: ${error.message}`);
+      throw new CloudinaryError(`Cloudinary upload failed: ${error.message}`, 'CLOUDINARY_UPLOAD_FAILED');
+    }
+  }
+
+  /**
    * Stores Cloudinary asset metadata in MySQL transactional database
    */
   async registerAssetMetadata(userId, assetPayload, userRole = 'farmer') {
@@ -93,6 +114,8 @@ class CloudinaryService {
     const {
       public_id,
       original_url,
+      optimized_url,
+      secure_url,
       resource_type = 'image',
       annotated_url = null,
       width = 800,
@@ -103,7 +126,9 @@ class CloudinaryService {
     if (farm_id) await farmService.getFarmById(userId, farm_id, userRole);
     if (crop_id) await cropService.getCropById(userId, crop_id, userRole);
 
-    const optimizedUrl = this.generateOptimizedUrl(public_id) || original_url;
+    const finalOriginalUrl = original_url || secure_url;
+    // Prefer actual Cloudinary secure_url or optimized_url if provided; fallback to URL generation
+    const finalOptimizedUrl = optimized_url || secure_url || (public_id ? this.generateOptimizedUrl(public_id) : null) || finalOriginalUrl;
 
     return cloudinaryAssetRepository.create({
       user_id: userId,
@@ -111,8 +136,8 @@ class CloudinaryService {
       crop_id,
       public_id,
       resource_type,
-      original_url,
-      optimized_url: optimizedUrl,
+      original_url: finalOriginalUrl,
+      optimized_url: finalOptimizedUrl,
       annotated_url,
       width,
       height,

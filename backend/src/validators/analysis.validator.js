@@ -12,12 +12,15 @@ const diseaseAnalysisRequestSchema = Joi.object({
   farm_id: idSchema,
   cropId: idSchema,
   crop_id: idSchema,
-  cloudinaryAssetId: idSchema,
-  cloudinary_asset_id: idSchema
+  cloudinaryAssetId: idSchema.optional(),
+  cloudinary_asset_id: idSchema.optional(),
+  imageUrl: Joi.string().uri().optional(),
+  image_url: Joi.string().uri().optional(),
+  secure_url: Joi.string().uri().optional()
 })
 .or('farmId', 'farm_id')
 .or('cropId', 'crop_id')
-.or('cloudinaryAssetId', 'cloudinary_asset_id');
+.or('cloudinaryAssetId', 'cloudinary_asset_id', 'imageUrl', 'image_url', 'secure_url');
 
 const geminiResponseSchema = Joi.object({
   diseaseName: Joi.string().trim().min(2).max(255).required(),

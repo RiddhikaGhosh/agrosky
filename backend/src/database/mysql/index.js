@@ -2,7 +2,6 @@ const mysql = require('mysql2/promise');
 const mysqlConfig = require('../../config/mysql.config');
 const { logger } = require('../../utils/logger');
 const { DatabaseError } = require('../../utils/apiError');
-const { withTransaction } = require('./transaction');
 
 let pool = null;
 
@@ -64,6 +63,8 @@ const closePool = async () => {
     logger.info('MySQL connection pool cleanly terminated.');
   }
 };
+
+const { withTransaction } = require('./transaction');
 
 module.exports = {
   getPool,

@@ -18,17 +18,38 @@ class AnalysisService {
   /**
    * Master 14-Step Orchestrator connecting Cloudinary, Gemini, Weather, Risk Engine, MySQL, & Snowflake
    */
-  async executeCompleteAnalysis(userId, farmId, cropId, cloudinaryAssetId, userRole = 'farmer') {
+  async executeCompleteAnalysis(userId, farmId, cropId, cloudinaryAssetId, userRole = 'farmer', directImageUrl = null) {
     const traceId = randomUUID();
     logger.info(`Starting Master 14-Step Disease Analysis Pipeline [TraceID: ${traceId}]`);
 
     // STEP 1-4: Authenticate & Validate Farm, Crop, and Cloudinary Asset Ownership
     const farm = await farmService.getFarmById(userId, farmId, userRole);
     const crop = await cropService.getCropById(userId, cropId, userRole);
-    const asset = await cloudinaryService.getAssetById(userId, cloudinaryAssetId, userRole);
 
-    // STEP 5: Retrieve 800x600 optimized Cloudinary URL
-    const optimizedImageUrl = asset.optimized_url || asset.original_url;
+    let asset = null;
+    let targetImageUrl = directImageUrl;
+
+    if (cloudinaryAssetId) {
+      asset = await cloudinaryService.getAssetById(userId, cloudinaryAssetId, userRole);
+      targetImageUrl = asset.optimized_url || asset.original_url || targetImageUrl;
+    } else if (targetImageUrl) {
+      try {
+        asset = await cloudinaryService.registerAssetMetadata(userId, {
+          farm_id: farmId,
+          crop_id: cropId,
+          public_id: `crop_${cropId}_${Date.now()}`,
+          original_url: targetImageUrl,
+          optimized_url: targetImageUrl,
+          resource_type: 'image'
+        }, userRole);
+      } catch (assetRegErr) {
+        logger.warn(`[TraceID: ${traceId}] Auto-registering asset metadata skipped: ${assetRegErr.message}`);
+      }
+    }
+
+    if (!targetImageUrl) {
+      throw ApiError.badRequest('No image URL or Cloudinary asset provided for analysis', 'INVALID_IMAGE_URL');
+    }
 
     // STEP 6: Retrieve Crop & Farm context
     const cropContext = {
@@ -46,7 +67,21 @@ class AnalysisService {
     }
 
     // STEP 8-9: Send Image to Gemini AI & Validate Response strictly
-    const { rawResponse } = await analyzeLeafImageWithGemini(optimizedImageUrl, cropContext);
+    let rawResponse;
+    try {
+      const geminiResult = await analyzeLeafImageWithGemini(targetImageUrl, cropContext);
+      rawResponse = geminiResult.rawResponse;
+    } catch (err) {
+      // If optimized transformed URL fails with 404, fallback to asset's original secure_url
+      if (asset && asset.original_url && asset.original_url !== targetImageUrl && (err.errorCode === 'CLOUDINARY_IMAGE_NOT_FOUND' || err.statusCode === 404)) {
+        logger.warn(`[TraceID: ${traceId}] Optimized URL failed with 404, falling back to original_url: ${asset.original_url}`);
+        targetImageUrl = asset.original_url;
+        const geminiResult = await analyzeLeafImageWithGemini(targetImageUrl, cropContext);
+        rawResponse = geminiResult.rawResponse;
+      } else {
+        throw err;
+      }
+    }
     const validatedGemini = parseAndValidateGeminiResponse(rawResponse);
 
     // STEP 10: Calculate Agricultural Risk Score & Level
@@ -56,7 +91,7 @@ class AnalysisService {
     let recommendationResult = null;
     try {
       recommendationResult = await recommendationService.generateRecommendations(
-        userId, farmId, cropId, asset.id, 'en', userRole
+        userId, farmId, cropId, asset ? asset.id : null, 'en', userRole
       );
     } catch (recErr) {
       logger.warn(`[TraceID: ${traceId}] Recommendation synthesis warning: ${recErr.message}`);
@@ -76,7 +111,7 @@ class AnalysisService {
           user_id: userId,
           farm_id: farmId,
           crop_id: cropId,
-          cloudinary_asset_id: cloudinaryAssetId,
+          cloudinary_asset_id: asset ? asset.id : (cloudinaryAssetId || null),
           disease_name: validatedGemini.diseaseName,
           confidence_score: validatedGemini.confidenceScore,
           severity: validatedGemini.severity,
@@ -136,9 +171,9 @@ class AnalysisService {
         timingSuggestions: recommendationResult.timingSuggestions || []
       },
       image: {
-        assetId: asset.id,
-        publicId: asset.public_id,
-        optimizedUrl: asset.optimized_url || asset.original_url
+        assetId: asset ? asset.id : (cloudinaryAssetId || null),
+        publicId: asset ? asset.public_id : null,
+        optimizedUrl: targetImageUrl
       }
     };
   }
