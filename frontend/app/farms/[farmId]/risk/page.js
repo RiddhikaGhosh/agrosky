@@ -13,10 +13,6 @@ import { farmsApi } from '@/lib/api/farms';
 import { riskApi } from '@/lib/api/risk';
 import { Activity, Brain, CloudSun, MapPin, ArrowLeft } from 'lucide-react';
 
-export async function generateStaticParams() {
-  return [];
-}
-
 export default function FarmRiskPage({ params: paramsPromise }) {
   const params = use(paramsPromise);
   const farmId = params.farmId;

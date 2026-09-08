@@ -14,10 +14,6 @@ import { useToast } from '@/context/ToastContext';
 import { farmsApi } from '@/lib/api/farms';
 import { Sprout, Calendar, Layers, ArrowLeft, Check } from 'lucide-react';
 
-export async function generateStaticParams() {
-  return [];
-}
-
 export default function CreateCropPage({ params: paramsPromise }) {
   const params = use(paramsPromise);
   const farmId = params.farmId;

@@ -33,10 +33,6 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-export async function generateStaticParams() {
-  return [];
-}
-
 export default function AnalysisDetailPage({ params: paramsPromise }) {
   const params = use(paramsPromise);
   const analysisId = params.analysisId;

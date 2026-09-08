@@ -17,10 +17,6 @@ import { farmsApi } from '@/lib/api/farms';
 import { cropsApi } from '@/lib/api/crops';
 import { Sprout, Plus, Eye, Edit, Trash2, Calendar, Scan, ArrowLeft, Layers } from 'lucide-react';
 
-export async function generateStaticParams() {
-  return [];
-}
-
 export default function FarmCropsListPage({ params: paramsPromise }) {
   const params = use(paramsPromise);
   const farmId = params.farmId;
